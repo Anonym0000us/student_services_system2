@@ -5,7 +5,7 @@ echo "<h2>🔄 Resetting Scholarship Admin Account</h2>";
 
 // Step 1: Check current scholarship admin account
 echo "<h3>📋 Current Scholarship Admin Account:</h3>";
-$check_sql = "SELECT * FROM users WHERE user_id = 'Schorlarship01' OR username LIKE '%schorlarship%' OR role = 'Scholarship Admin'";
+$check_sql = "SELECT * FROM users WHERE user_id = 'Schorlarship01' OR role = 'Scholarship Admin'";
 $check_result = $conn->query($check_sql);
 
 if ($check_result && $check_result->num_rows > 0) {
@@ -50,6 +50,12 @@ if ($delete_result) {
 // Step 3: Create new scholarship admin account
 echo "<h3>➕ Creating New Scholarship Admin Account:</h3>";
 
+// Try different password hashing methods
+$password = 'admin123';
+$password_hash1 = password_hash($password, PASSWORD_DEFAULT);
+$password_hash2 = md5($password); // Alternative method
+$password_hash3 = sha1($password); // Another alternative
+
 $new_admin_data = [
     'user_id' => 'Scholarship01',
     'first_name' => 'Scholarship',
@@ -64,7 +70,7 @@ $new_admin_data = [
     'current_address' => 'NEUST Gabaldon Campus',
     'permanent_address' => 'NEUST Gabaldon Campus',
     'role' => 'Scholarship Admin',
-    'password_hash' => password_hash('admin123', PASSWORD_DEFAULT),
+    'password_hash' => $password_hash1, // Try PASSWORD_DEFAULT first
     'mother_name' => 'Admin Mother',
     'mother_work' => 'N/A',
     'mother_contact' => 'N/A',
@@ -228,7 +234,7 @@ $check_stmt->close();
 
 // Step 4: Verify the new account
 echo "<h3>✅ Verification - New Admin Account:</h3>";
-$verify_sql = "SELECT user_id, first_name, last_name, email, role, status FROM users WHERE user_id = 'Scholarship01'";
+$verify_sql = "SELECT user_id, first_name, last_name, email, role, status, password_hash FROM users WHERE user_id = 'Scholarship01'";
 $verify_result = $conn->query($verify_sql);
 
 if ($verify_result && $verify_result->num_rows > 0) {
@@ -247,6 +253,13 @@ if ($verify_result && $verify_result->num_rows > 0) {
     echo "<p><strong>User ID:</strong> <code>Scholarship01</code></p>";
     echo "<p><strong>Password:</strong> <code>admin123</code></p>";
     echo "<p><strong>⚠️ Important:</strong> Change the password after first login!</p>";
+    echo "</div>";
+    
+    // Show password hash for debugging
+    echo "<div style='background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;'>";
+    echo "<h4 style='color: #6c757d; margin: 0 0 10px 0;'>🔍 Debug Info:</h4>";
+    echo "<p><strong>Password Hash:</strong> <code>" . htmlspecialchars($admin['password_hash']) . "</code></p>";
+    echo "<p><strong>Hash Length:</strong> " . strlen($admin['password_hash']) . " characters</p>";
     echo "</div>";
     
     echo "<a href='login.php' style='display: inline-block; background: #003366; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin-top: 15px;'>🔐 Go to Login Page</a>";
