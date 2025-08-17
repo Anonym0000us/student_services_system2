@@ -6,6 +6,45 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role
     header('Location: login.php');
     exit();
 }
+
+// Database connection for stats and notifications
+$host = "localhost";
+$user = "root";
+$password = "";
+$dbname = "student_services_db";
+
+$conn = new mysqli($host, $user, $password, $dbname);
+if ($conn->connect_error) {
+    $pending_count = 0;
+    $scholarships_count = 0;
+    $admin_notification_count = 0;
+} else {
+    // Get pending applications count
+    $pending_count = 0;
+    $count_sql = "SELECT COUNT(*) as count FROM scholarship_applications WHERE status = 'pending'";
+    $count_result = $conn->query($count_sql);
+    if ($count_result) {
+        $pending_count = $count_result->fetch_assoc()['count'];
+    }
+    
+    // Get total scholarships count
+    $scholarships_count = 0;
+    $count_sql = "SELECT COUNT(*) as count FROM scholarships WHERE status = 'active'";
+    $count_result = $conn->query($count_sql);
+    if ($count_result) {
+        $scholarships_count = $count_result->fetch_assoc()['count'];
+    }
+    
+    // Get unread notifications count for admin
+    $admin_notification_count = 0;
+    $count_sql = "SELECT COUNT(*) as count FROM scholarship_notifications WHERE is_read = FALSE";
+    $count_result = $conn->query($count_sql);
+    if ($count_result) {
+        $admin_notification_count = $count_result->fetch_assoc()['count'];
+    }
+    
+    $conn->close();
+}
 ?>
 
 <!DOCTYPE html>
@@ -236,43 +275,12 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role
                 <div class="row">
                     <div class="col-3">
                         <div class="stat-item">
-                            <?php
-                            // Get pending applications count
-                            $pending_count = 0;
-                            $host = "localhost";
-                            $user = "root";
-                            $password = "";
-                            $dbname = "student_services_db";
-                            
-                            $conn = new mysqli($host, $user, $password, $dbname);
-                            if (!$conn->connect_error) {
-                                $count_sql = "SELECT COUNT(*) as count FROM scholarship_applications WHERE status = 'pending'";
-                                $count_result = $conn->query($count_sql);
-                                if ($count_result) {
-                                    $pending_count = $count_result->fetch_assoc()['count'];
-                                }
-                                $conn->close();
-                            }
-                            ?>
                             <div class="stat-number"><?= $pending_count ?></div>
                             <div class="stat-label">Pending</div>
                         </div>
                     </div>
                     <div class="col-3">
                         <div class="stat-item">
-                            <?php
-                            // Get total scholarships count
-                            $scholarships_count = 0;
-                            $conn = new mysqli($host, $user, $password, $dbname);
-                            if (!$conn->connect_error) {
-                                $count_sql = "SELECT COUNT(*) as count FROM scholarships WHERE status = 'active'";
-                                $count_result = $conn->query($count_sql);
-                                if ($count_result) {
-                                    $scholarships_count = $count_result->fetch_assoc()['count'];
-                                }
-                                $conn->close();
-                            }
-                            ?>
                             <div class="stat-number"><?= $scholarships_count ?></div>
                             <div class="stat-label">Active</div>
                         </div>
@@ -286,19 +294,6 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role
                 <div class="dropdown position-relative">
                     <a class="nav-link" href="#" role="button" data-bs-toggle="dropdown">
                         <i class="fas fa-bell"></i>
-                        <?php
-                        // Get unread notifications count for admin
-                        $admin_notification_count = 0;
-                        $conn = new mysqli($host, $user, $password, $dbname);
-                        if (!$conn->connect_error) {
-                            $count_sql = "SELECT COUNT(*) as count FROM scholarship_notifications WHERE is_read = FALSE";
-                            $count_result = $conn->query($count_sql);
-                            if ($count_result) {
-                                $admin_notification_count = $count_result->fetch_assoc()['count'];
-                            }
-                            $conn->close();
-                        }
-                        ?>
                         <?php if ($admin_notification_count > 0): ?>
                             <span class="notification-badge"><?= $admin_notification_count ?></span>
                         <?php endif; ?>

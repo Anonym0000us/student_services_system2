@@ -6,6 +6,31 @@ if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
 }
+
+// Database connection for notifications
+$host = "localhost";
+$user = "root";
+$password = "";
+$dbname = "student_services_db";
+
+$conn = new mysqli($host, $user, $password, $dbname);
+if ($conn->connect_error) {
+    $notification_count = 0;
+} else {
+    // Get unread notifications count
+    $notification_count = 0;
+    $user_id = $_SESSION['user_id'];
+    $count_sql = "SELECT COUNT(*) as count FROM scholarship_notifications WHERE user_id = ? AND is_read = FALSE";
+    $count_stmt = $conn->prepare($count_sql);
+    if ($count_stmt) {
+        $count_stmt->bind_param("s", $user_id);
+        $count_stmt->execute();
+        $count_result = $count_stmt->get_result();
+        $notification_count = $count_result->fetch_assoc()['count'];
+        $count_stmt->close();
+    }
+    $conn->close();
+}
 ?>
 
 <!DOCTYPE html>
