@@ -10,7 +10,9 @@
         <a href="guidance_list_admin.php" class="menu-item" id="guidance-requests">
             <i class="fas fa-file-alt"></i> Guidance Requests
         </a>
-     
+        <a href="guidance_calendar_admin.php" class="menu-item" id="guidance-calendar">
+            <i class="fas fa-calendar-alt"></i> Calendar
+        </a>
         <a href="generate_reports.php" class="menu-item" id="generate-reports">
             <i class="fas fa-file-alt"></i> Generate Reports
         </a>
@@ -18,7 +20,7 @@
             <i class="fas fa-bullhorn"></i> Announcements
         </a>
         
-      
+       
      
     </div>
     <a href="login.php" class="logout-btn">
