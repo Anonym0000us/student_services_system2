@@ -15,23 +15,37 @@ if (!isset($_SESSION['user_id'])) {
     die("Error: User not logged in.");
 }
 
+// CSRF token
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $user_id = $_SESSION['user_id'];
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $title = $_POST['title'];
-    $description = $_POST['description'];
-
-    $stmt = $conn->prepare("INSERT INTO grievances (user_id, title, description, submission_date, status) VALUES (?, ?, ?, NOW(), 'pending')");
-    $stmt->bind_param("sss", $user_id, $title, $description);
-
-    if ($stmt->execute()) {
-        $message = "Grievance submitted successfully.";
+    // CSRF validate
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        $message = "Invalid request. Please refresh and try again.";
     } else {
-        $message = "Error submitting grievance: " . $stmt->error;
-    }
+        $title = trim($_POST['title'] ?? '');
+        $description = trim($_POST['description'] ?? '');
 
-    $stmt->close();
+        if ($title === '' || strlen($title) < 5 || $description === '' || strlen($description) < 20) {
+            $message = "Please provide a valid title (min 5 chars) and description (min 20 chars).";
+        } else {
+            $stmt = $conn->prepare("INSERT INTO grievances (user_id, title, description, submission_date, status) VALUES (?, ?, ?, NOW(), 'pending')");
+            $stmt->bind_param("sss", $user_id, $title, $description);
+
+            if ($stmt->execute()) {
+                $message = "Grievance submitted successfully.";
+            } else {
+                $message = "Error submitting grievance: " . $stmt->error;
+            }
+
+            $stmt->close();
+        }
+    }
 }
 
 $conn->close();
@@ -97,15 +111,13 @@ $conn->close();
 
         .alert {
             padding: 15px;
-            background-color: #f44336;
+            background-color: #2196F3;
             color: white;
             margin-bottom: 20px;
             border-radius: 5px;
+            text-align:center;
         }
-
-        .alert-info {
-            background-color: #2196F3;
-        }
+        .alert.error { background-color: #f44336; }
     </style>
 </head>
 <body>
@@ -175,18 +187,19 @@ $conn->close();
 <div class="container">
     <h2 class="text-center mt-4">Submit Grievance</h2>
     <?php if (isset($message)): ?>
-        <div class="alert alert-info"><?= htmlspecialchars($message) ?></div>
+        <div class="alert<?= (strpos($message,'Error')!==false || strpos($message,'Invalid')!==false)?' error':'' ?>"><?= htmlspecialchars($message) ?></div>
     <?php endif; ?>
     <form method="POST" action="submit_grievance.php">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
         <div class="mb-3">
             <label for="title" class="form-label">Title</label>
-            <input type="text" class="form-control" id="title" name="title" required>
+            <input type="text" class="form-control" id="title" name="title" required minlength="5" maxlength="120" placeholder="Brief title">
         </div>
         <div class="mb-3">
             <label for="description" class="form-label">Description</label>
-            <textarea class="form-control" id="description" name="description" rows="5" required></textarea>
+            <textarea class="form-control" id="description" name="description" rows="5" required minlength="20" placeholder="Describe your grievance..."></textarea>
         </div>
-        <button type="submit" class="btn btn-primary">Submit</button>
+        <button type="submit" class="btn-primary">Submit</button>
     </form>
 </div>
 
@@ -377,55 +390,55 @@ body {
 </style>
 
 <script>
-    // Mobile Menu Toggle
-    document.addEventListener("DOMContentLoaded", function () {
-        const menuToggle = document.querySelector(".navbar");
-        const navLinks = document.querySelector(".nav-links");
+// Mobile Menu Toggle
+document.addEventListener("DOMContentLoaded", function () {
+    const menuToggle = document.querySelector(".navbar");
+    const navLinks = document.querySelector(".nav-links");
 
-        menuToggle.addEventListener("click", function () {
-            navLinks.classList.toggle("active");
-        });
+    menuToggle.addEventListener("click", function () {
+        navLinks.classList.toggle("active");
+    });
 
-        // Toggle Dropdown on Click for Desktop and Mobile
-        const dropdowns = document.querySelectorAll(".dropdown > a");
-        dropdowns.forEach(dropdown => {
-            dropdown.addEventListener("click", function (event) {
-                event.preventDefault();
-                const dropdownContent = this.nextElementSibling;
-                // Hide other dropdowns
-                const allDropdowns = document.querySelectorAll('.dropdown');
-                allDropdowns.forEach(d => {
-                    if (d !== this.parentElement) {
-                        d.classList.remove("active");
-                        d.querySelector(".dropdown-content").style.display = "none";
-                    }
-                });
-                // Toggle the current dropdown
-                this.parentElement.classList.toggle("active");
-                dropdownContent.style.display = dropdownContent.style.display === "block" ? "none" : "block";
+    // Toggle Dropdown on Click for Desktop and Mobile
+    const dropdowns = document.querySelectorAll(".dropdown > a");
+    dropdowns.forEach(dropdown => {
+        dropdown.addEventListener("click", function (event) {
+            event.preventDefault();
+            const dropdownContent = this.nextElementSibling;
+            // Hide other dropdowns
+            const allDropdowns = document.querySelectorAll('.dropdown');
+            allDropdowns.forEach(d => {
+                if (d !== this.parentElement) {
+                    d.classList.remove("active");
+                    d.querySelector(".dropdown-content").style.display = "none";
+                }
             });
-        });
-
-        // Toggle Sub-dropdown on Click for Mobile
-        const subDropdowns = document.querySelectorAll(".sub-dropdown > a");
-        subDropdowns.forEach(subDropdown => {
-            subDropdown.addEventListener("click", function (event) {
-                event.preventDefault();
-                const subDropdownContent = this.nextElementSibling;
-                // Hide other sub-dropdowns
-                const allSubDropdowns = document.querySelectorAll('.sub-dropdown');
-                allSubDropdowns.forEach(sd => {
-                    if (sd !== this.parentElement) {
-                        sd.classList.remove("active");
-                        sd.querySelector(".sub-dropdown-content").style.display = "none";
-                    }
-                });
-                // Toggle the current sub-dropdown
-                this.parentElement.classList.toggle("active");
-                subDropdownContent.style.display = subDropdownContent.style.display === "block" ? "none" : "block";
-            });
+            // Toggle the current dropdown
+            this.parentElement.classList.toggle("active");
+            dropdownContent.style.display = dropdownContent.style.display === "block" ? "none" : "block";
         });
     });
+
+    // Toggle Sub-dropdown on Click for Mobile
+    const subDropdowns = document.querySelectorAll(".sub-dropdown > a");
+    subDropdowns.forEach(subDropdown => {
+        subDropdown.addEventListener("click", function (event) {
+            event.preventDefault();
+            const subDropdownContent = this.nextElementSibling;
+            // Hide other sub-dropdowns
+            const allSubDropdowns = document.querySelectorAll('.sub-dropdown');
+            allSubDropdowns.forEach(sd => {
+                if (sd !== this.parentElement) {
+                    sd.classList.remove("active");
+                    sd.querySelector(".sub-dropdown-content").style.display = "none";
+                }
+            });
+            // Toggle the current sub-dropdown
+            this.parentElement.classList.toggle("active");
+            subDropdownContent.style.display = subDropdownContent.style.display === "block" ? "none" : "block";
+        });
+    });
+});
 </script>
 
 </body>

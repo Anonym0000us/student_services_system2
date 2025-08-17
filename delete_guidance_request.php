@@ -2,26 +2,35 @@
 include 'config.php'; 
 session_start();
 
+// Require role
+if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'] ?? '', ['Guidance Admin','Counselor'], true)) {
+    header('Location: login.php');
+    exit;
+}
 
 // If form is submitted to delete a request
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_request'])) {
-    $request_id = $_POST['request_id'];
+    // CSRF check
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'])) {
+        http_response_code(403);
+        exit('Invalid CSRF token');
+    }
 
-    // Validate received data
-    if (!empty($request_id)) {
-        // Delete query
+    $request_id = (int)($_POST['request_id'] ?? 0);
+
+    if ($request_id > 0) {
         $deleteQuery = "DELETE FROM appointments WHERE id = ?";
         $stmt = $conn->prepare($deleteQuery);
         $stmt->bind_param("i", $request_id);
 
         if ($stmt->execute()) {
-            header("Location: guidance_list_admin.php?success=Guidance request deleted successfully");
+            header("Location: guidance_list_admin.php?success=" . urlencode('Guidance request deleted successfully'));
             exit();
         } else {
-            $error_message = "Delete failed. Try again!";
+            echo 'Delete failed. Try again!';
         }
     } else {
-        $error_message = "Invalid data. Please try again.";
+        echo 'Invalid data. Please try again.';
     }
 }
 ?>

@@ -2,22 +2,54 @@
 include 'config.php';
 session_start();
 
+// CSRF token
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 // If form is submitted
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $student_id = $_SESSION['user_id']; // Use user_id as student_id
-    $appointment_date = $_POST['appointment_date'];
-    $reason = $_POST['reason'];
-    $guidance_admin_id = 'Guidance01'; // Assuming the guidance admin's user_id is 'Guidance01'
-
-    // Insert query
-    $insertQuery = "INSERT INTO appointments (student_id, user_id, appointment_date, reason) VALUES (?, ?, ?, ?)";
-    $stmt = $conn->prepare($insertQuery);
-    $stmt->bind_param("ssss", $student_id, $guidance_admin_id, $appointment_date, $reason);
-
-    if ($stmt->execute()) {
-        $success_message = "Guidance request submitted successfully";
+    // CSRF validate
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        $error_message = "Invalid request. Please refresh and try again.";
+    } else if (!isset($_SESSION['user_id'])) {
+        $error_message = "You must be logged in to submit a request.";
     } else {
-        $error_message = "Submission failed. Try again!";
+        $student_id = $_SESSION['user_id']; // Use user_id as student_id
+        $appointment_date_raw = trim($_POST['appointment_date'] ?? '');
+        $reason = trim($_POST['reason'] ?? '');
+
+        // Basic validation
+        if ($appointment_date_raw === '' || $reason === '' || strlen($reason) < 10) {
+            $error_message = "Please provide a valid date/time and a brief reason (min 10 characters).";
+        } else {
+            // Normalize datetime (from input type=datetime-local -> YYYY-MM-DDTHH:MM)
+            $appointment_date = $appointment_date_raw;
+            // Pick a guidance admin/counselor to assign
+            $guidance_admin_id = null;
+            $sel = $conn->prepare("SELECT user_id FROM users WHERE role IN ('Guidance Admin','Counselor') AND status = 'Active' ORDER BY role = 'Guidance Admin' DESC, user_id ASC LIMIT 1");
+            if ($sel && $sel->execute()) {
+                $res = $sel->get_result()->fetch_assoc();
+                if ($res) { $guidance_admin_id = $res['user_id']; }
+            }
+            if (!$guidance_admin_id) {
+                $guidance_admin_id = 'Guidance01'; // Fallback
+            }
+
+            // Insert query (keep existing schema)
+            $insertQuery = "INSERT INTO appointments (student_id, user_id, appointment_date, reason) VALUES (?, ?, ?, ?)";
+            $stmt = $conn->prepare($insertQuery);
+            if ($stmt) {
+                $stmt->bind_param("ssss", $student_id, $guidance_admin_id, $appointment_date, $reason);
+                if ($stmt->execute()) {
+                    $success_message = "Guidance request submitted successfully.";
+                } else {
+                    $error_message = "Submission failed. Please try again later.";
+                }
+            } else {
+                $error_message = "Server error. Please try again later.";
+            }
+        }
     }
 }
 ?>
@@ -84,6 +116,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             font-size: 16px;
         }
 
+        small.helper { display:block; text-align:left; color:#6c757d; margin-top:-10px; margin-bottom:10px; }
+
         button {
             padding: 10px 20px;
             background-color: #007bff;
@@ -114,10 +148,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <?php endif; ?>
 
             <form method="POST">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                 <label for="appointment_date">Appointment Date:</label>
                 <input type="datetime-local" id="appointment_date" name="appointment_date" required>
                 <label for="reason">Reason:</label>
-                <textarea id="reason" name="reason" required></textarea>
+                <textarea id="reason" name="reason" required minlength="10" placeholder="Briefly describe your concern..."></textarea>
+                <small class="helper">We will try to accommodate your preferred time and match you with an available counselor.</small>
                 <button type="submit">Submit Request</button>
             </form>
         </div>

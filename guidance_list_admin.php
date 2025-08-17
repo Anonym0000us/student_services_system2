@@ -2,22 +2,27 @@
 include 'config.php';
 session_start();
 
+// Require guidance role
+if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'] ?? '', ['Guidance Admin','Counselor'], true)) {
+    header('Location: login.php');
+    exit;
+}
 
-
-// Fetch guidance requests for the logged-in admin user
+// Fetch guidance requests for the logged-in admin/counselor
 $user_id = $_SESSION['user_id'];
 $query = "SELECT appointments.*, students.first_name AS student_first_name, students.last_name AS student_last_name
           FROM appointments
           JOIN users AS students ON appointments.student_id = students.user_id
-          WHERE appointments.user_id = ?"; // Filter by the logged-in admin's ID
+          WHERE appointments.user_id = ?
+          ORDER BY appointments.appointment_date DESC"; // Filter by the logged-in admin's ID
 $stmt = $conn->prepare($query);
 $stmt->bind_param("s", $user_id); // Bind the admin ID to the query
 $stmt->execute();
 $result = $stmt->get_result();
 
-// Check if query execution was successful
-if ($result === false) {
-    die("Error executing query: " . $stmt->error);
+// CSRF token for modals
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 ?>
 
@@ -102,28 +107,11 @@ if ($result === false) {
         .delete-link:hover {
             background-color: #c9302c;
         }
-        .update-form, .delete-form {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .update-form select, .update-form button, .delete-form button {
-            padding: 10px;
-            margin-bottom: 15px;
-            border: 1px solid #dddddd;
-            border-radius: 4px;
-            font-size: 16px;
-        }
-        .update-form button, .delete-form button {
-            background-color: #007bff;
-            color: #ffffff;
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        .update-form button:hover, .delete-form button:hover {
-            background-color: #0056b3;
-        }
+        .badge { display:inline-block; padding:4px 8px; border-radius:12px; font-size:12px; }
+        .bg-pending { background:#ffc107; color:#212529; }
+        .bg-approved { background:#28a745; color:#fff; }
+        .bg-completed { background:#0d6efd; color:#fff; }
+        .bg-rejected { background:#dc3545; color:#fff; }
 
         /* Modal styles */
         .modal {
@@ -196,7 +184,13 @@ if ($result === false) {
                             <td><?= htmlspecialchars($row['student_first_name'] . ' ' . $row['student_last_name']) ?></td>
                             <td><?= htmlspecialchars($row['appointment_date']) ?></td>
                             <td><?= htmlspecialchars($row['reason']) ?></td>
-                            <td><?= htmlspecialchars($row['status']) ?></td>
+                            <td>
+                                <?php
+                                $st = strtolower($row['status'] ?? 'pending');
+                                $cls = $st==='approved'?'bg-approved':($st==='completed'?'bg-completed':($st==='rejected'?'bg-rejected':'bg-pending'));
+                                ?>
+                                <span class="badge <?= $cls ?>"><?= htmlspecialchars($row['status']) ?></span>
+                            </td>
                             <td><?= htmlspecialchars($row['admin_message']) ?></td>
                             <td>
                                 <button class="action-link" onclick="openUpdateModal('<?= htmlspecialchars($row['id']) ?>', '<?= htmlspecialchars($row['status']) ?>')">Update Status</button>
@@ -219,11 +213,13 @@ if ($result === false) {
                 <h2>Update Guidance Request Status</h2>
                 <form method="POST" class="update-form" action="update_guidance_status.php">
                     <input type="hidden" id="update_request_id" name="request_id">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                     <label for="status">Status:</label>
                     <select id="status" name="status" required>
                         <option value="pending">Pending</option>
                         <option value="approved">Approved</option>
                         <option value="completed">Completed</option>
+                        <option value="rejected">Rejected</option>
                     </select>
                     <label for="admin_message">Admin Message:</label>
                     <textarea id="admin_message" name="admin_message"></textarea>
@@ -239,6 +235,7 @@ if ($result === false) {
                 <h2>Delete Guidance Request</h2>
                 <form method="POST" class="delete-form" action="delete_guidance_request.php">
                     <input type="hidden" id="delete_request_id" name="request_id">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                     <p>Are you sure you want to delete this request?</p>
                     <button type="submit" name="delete_request">Delete</button>
                 </form>
@@ -249,7 +246,7 @@ if ($result === false) {
     <script>
         function openUpdateModal(request_id, currentStatus) {
             document.getElementById('update_request_id').value = request_id;
-            document.getElementById('status').value = currentStatus;
+            document.getElementById('status').value = currentStatus.toLowerCase();
             document.getElementById('updateModal').style.display = "flex";
         }
 
