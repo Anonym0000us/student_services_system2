@@ -11,13 +11,12 @@ $check_result = $conn->query($check_sql);
 if ($check_result && $check_result->num_rows > 0) {
     echo "<table border='1' style='border-collapse: collapse; width: 100%; margin: 10px 0;'>";
     echo "<tr style='background: #f0f0f0;'>";
-    echo "<th>User ID</th><th>Username</th><th>First Name</th><th>Last Name</th><th>Email</th><th>Role</th><th>Status</th>";
+    echo "<th>User ID</th><th>First Name</th><th>Last Name</th><th>Email</th><th>Role</th><th>Status</th>";
     echo "</tr>";
     
     while ($row = $check_result->fetch_assoc()) {
         echo "<tr>";
         echo "<td>" . htmlspecialchars($row['user_id']) . "</td>";
-        echo "<td>" . htmlspecialchars($row['username']) . "</td>";
         echo "<td>" . htmlspecialchars($row['first_name']) . "</td>";
         echo "<td>" . htmlspecialchars($row['last_name']) . "</td>";
         echo "<td>" . htmlspecialchars($row['email']) . "</td>";
@@ -53,29 +52,35 @@ echo "<h3>➕ Creating New Scholarship Admin Account:</h3>";
 
 $new_admin_data = [
     'user_id' => 'Scholarship01',
-    'username' => 'scholarship_admin',
     'first_name' => 'Scholarship',
+    'middle_name' => '',
     'last_name' => 'Administrator',
     'birth_date' => '1990-01-01',
     'nationality' => 'Filipino',
     'religion' => 'Christian',
-    'gender' => 'Male',
+    'biological_sex' => 'Male',
     'email' => 'scholarship@neust.edu.ph',
     'phone' => '09123456789',
     'current_address' => 'NEUST Gabaldon Campus',
     'permanent_address' => 'NEUST Gabaldon Campus',
     'role' => 'Scholarship Admin',
-    'password' => password_hash('admin123', PASSWORD_DEFAULT),
+    'password_hash' => password_hash('admin123', PASSWORD_DEFAULT),
     'mother_name' => 'Admin Mother',
-    'mother_occupation' => 'N/A',
-    'mother_phone' => 'N/A',
+    'mother_work' => 'N/A',
+    'mother_contact' => 'N/A',
     'father_name' => 'Admin Father',
-    'father_occupation' => 'N/A',
-    'father_phone' => 'N/A',
-    'year_level' => '0',
-    'course' => 'Scholarship',
-    'created_at' => date('Y-m-d H:i:s'),
-    'status' => 'Active'
+    'father_work' => 'N/A',
+    'father_contact' => 'N/A',
+    'siblings_count' => 0,
+    'unit' => 'Scholarship Office',
+    'last_login' => NULL,
+    'date_registered' => date('Y-m-d H:i:s'),
+    'profile_picture' => NULL,
+    'status' => 'Active',
+    'year' => NULL,
+    'section' => NULL,
+    'course' => 'Scholarship Management',
+    'department' => 'Student Services'
 ];
 
 // Check if user_id already exists
@@ -88,57 +93,69 @@ $check_result = $check_stmt->get_result();
 if ($check_result->num_rows > 0) {
     // Update existing user_id
     $update_sql = "UPDATE users SET 
-                    username = ?, 
                     first_name = ?, 
+                    middle_name = ?, 
                     last_name = ?, 
                     birth_date = ?, 
                     nationality = ?, 
                     religion = ?, 
-                    gender = ?, 
+                    biological_sex = ?, 
                     email = ?, 
                     phone = ?, 
                     current_address = ?, 
                     permanent_address = ?, 
                     role = ?, 
-                    password = ?, 
+                    password_hash = ?, 
                     mother_name = ?, 
-                    mother_occupation = ?, 
-                    mother_phone = ?, 
+                    mother_work = ?, 
+                    mother_contact = ?, 
                     father_name = ?, 
-                    father_occupation = ?, 
-                    father_phone = ?, 
-                    year_level = ?, 
+                    father_work = ?, 
+                    father_contact = ?, 
+                    siblings_count = ?, 
+                    unit = ?, 
+                    last_login = ?, 
+                    date_registered = ?, 
+                    profile_picture = ?, 
+                    status = ?, 
+                    year = ?, 
+                    section = ?, 
                     course = ?, 
-                    updated_at = ?, 
-                    status = ? 
+                    department = ? 
                     WHERE user_id = ?";
     
     $stmt = $conn->prepare($update_sql);
     if ($stmt) {
-        $stmt->bind_param("sssssssssssssssssssssss", 
-            $new_admin_data['username'],
+        $stmt->bind_param("sssssssssssssssssssssssssssss", 
             $new_admin_data['first_name'],
+            $new_admin_data['middle_name'],
             $new_admin_data['last_name'],
             $new_admin_data['birth_date'],
             $new_admin_data['nationality'],
             $new_admin_data['religion'],
-            $new_admin_data['gender'],
+            $new_admin_data['biological_sex'],
             $new_admin_data['email'],
             $new_admin_data['phone'],
             $new_admin_data['current_address'],
             $new_admin_data['permanent_address'],
             $new_admin_data['role'],
-            $new_admin_data['password'],
+            $new_admin_data['password_hash'],
             $new_admin_data['mother_name'],
-            $new_admin_data['mother_occupation'],
-            $new_admin_data['mother_phone'],
+            $new_admin_data['mother_work'],
+            $new_admin_data['mother_contact'],
             $new_admin_data['father_name'],
-            $new_admin_data['father_occupation'],
-            $new_admin_data['father_phone'],
-            $new_admin_data['year_level'],
-            $new_admin_data['course'],
-            date('Y-m-d H:i:s'),
+            $new_admin_data['father_work'],
+            $new_admin_data['father_contact'],
+            $new_admin_data['siblings_count'],
+            $new_admin_data['unit'],
+            $new_admin_data['last_login'],
+            $new_admin_data['date_registered'],
+            $new_admin_data['profile_picture'],
             $new_admin_data['status'],
+            $new_admin_data['year'],
+            $new_admin_data['section'],
+            $new_admin_data['course'],
+            $new_admin_data['department'],
             $new_admin_data['user_id']
         );
         
@@ -152,41 +169,48 @@ if ($check_result->num_rows > 0) {
 } else {
     // Insert new account
     $insert_sql = "INSERT INTO users (
-                        user_id, username, first_name, last_name, birth_date, nationality, religion, gender, 
-                        email, phone, current_address, permanent_address, role, password, mother_name, 
-                        mother_occupation, mother_phone, father_name, father_occupation, father_phone, 
-                        year_level, course, created_at, status
+                        user_id, first_name, middle_name, last_name, birth_date, nationality, religion, 
+                        biological_sex, email, phone, current_address, permanent_address, role, password_hash, 
+                        mother_name, mother_work, mother_contact, father_name, father_work, father_contact, 
+                        siblings_count, unit, last_login, date_registered, profile_picture, status, year, 
+                        section, course, department
                     ) VALUES (
-                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                     )";
     
     $stmt = $conn->prepare($insert_sql);
     if ($stmt) {
-        $stmt->bind_param("sssssssssssssssssssssss", 
+        $stmt->bind_param("sssssssssssssssssssssssssssss", 
             $new_admin_data['user_id'],
-            $new_admin_data['username'],
             $new_admin_data['first_name'],
+            $new_admin_data['middle_name'],
             $new_admin_data['last_name'],
             $new_admin_data['birth_date'],
             $new_admin_data['nationality'],
             $new_admin_data['religion'],
-            $new_admin_data['gender'],
+            $new_admin_data['biological_sex'],
             $new_admin_data['email'],
             $new_admin_data['phone'],
             $new_admin_data['current_address'],
             $new_admin_data['permanent_address'],
             $new_admin_data['role'],
-            $new_admin_data['password'],
+            $new_admin_data['password_hash'],
             $new_admin_data['mother_name'],
-            $new_admin_data['mother_occupation'],
-            $new_admin_data['mother_phone'],
+            $new_admin_data['mother_work'],
+            $new_admin_data['mother_contact'],
             $new_admin_data['father_name'],
-            $new_admin_data['father_occupation'],
-            $new_admin_data['father_phone'],
-            $new_admin_data['year_level'],
+            $new_admin_data['father_work'],
+            $new_admin_data['father_contact'],
+            $new_admin_data['siblings_count'],
+            $new_admin_data['unit'],
+            $new_admin_data['last_login'],
+            $new_admin_data['date_registered'],
+            $new_admin_data['profile_picture'],
+            $new_admin_data['status'],
+            $new_admin_data['year'],
+            $new_admin_data['section'],
             $new_admin_data['course'],
-            $new_admin_data['created_at'],
-            $new_admin_data['status']
+            $new_admin_data['department']
         );
         
         if ($stmt->execute()) {
@@ -204,7 +228,7 @@ $check_stmt->close();
 
 // Step 4: Verify the new account
 echo "<h3>✅ Verification - New Admin Account:</h3>";
-$verify_sql = "SELECT user_id, username, first_name, last_name, email, role, status FROM users WHERE user_id = 'Scholarship01'";
+$verify_sql = "SELECT user_id, first_name, last_name, email, role, status FROM users WHERE user_id = 'Scholarship01'";
 $verify_result = $conn->query($verify_sql);
 
 if ($verify_result && $verify_result->num_rows > 0) {
@@ -212,7 +236,6 @@ if ($verify_result && $verify_result->num_rows > 0) {
     echo "<div style='background: #d4edda; padding: 15px; border-radius: 5px; margin: 15px 0;'>";
     echo "<h4 style='color: #155724; margin: 0 0 10px 0;'>🎉 New Scholarship Admin Account Created Successfully!</h4>";
     echo "<p><strong>User ID:</strong> " . htmlspecialchars($admin['user_id']) . "</p>";
-    echo "<p><strong>Username:</strong> " . htmlspecialchars($admin['username']) . "</p>";
     echo "<p><strong>Name:</strong> " . htmlspecialchars($admin['first_name'] . ' ' . $admin['last_name']) . "</p>";
     echo "<p><strong>Email:</strong> " . htmlspecialchars($admin['email']) . "</p>";
     echo "<p><strong>Role:</strong> " . htmlspecialchars($admin['role']) . "</p>";
@@ -221,7 +244,7 @@ if ($verify_result && $verify_result->num_rows > 0) {
     
     echo "<div style='background: #fff3cd; padding: 15px; border-radius: 5px; margin: 15px 0;'>";
     echo "<h4 style='color: #856404; margin: 0 0 10px 0;'>🔐 Login Credentials:</h4>";
-    echo "<p><strong>Username:</strong> <code>scholarship_admin</code></p>";
+    echo "<p><strong>User ID:</strong> <code>Scholarship01</code></p>";
     echo "<p><strong>Password:</strong> <code>admin123</code></p>";
     echo "<p><strong>⚠️ Important:</strong> Change the password after first login!</p>";
     echo "</div>";
@@ -309,9 +332,9 @@ $conn->close();
         
         <div class="success">
             <strong>✅ New Admin Credentials:</strong><br>
-            Username: <code>scholarship_admin</code><br>
+            User ID: <code>Scholarship01</code><br>
             Password: <code>admin123</code><br>
-            User ID: <code>Scholarship01</code>
+            Role: <code>Scholarship Admin</code>
         </div>
     </div>
 </body>
