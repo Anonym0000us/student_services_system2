@@ -6,30 +6,37 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role
     header('Location: login.php');
     exit();
 }
+
+// Database connection for stats
+$host = "localhost";
+$user = "root";
+$password = "";
+$dbname = "student_services_db";
+
+$conn = new mysqli($host, $user, $password, $dbname);
+if ($conn->connect_error) {
+    $pending_count = 0;
+    $scholarships_count = 0;
+} else {
+    // Get pending applications count
+    $pending_count = 0;
+    $count_sql = "SELECT COUNT(*) as count FROM scholarship_applications WHERE status = 'pending'";
+    $count_result = $conn->query($count_sql);
+    if ($count_result) {
+        $pending_count = $count_result->fetch_assoc()['count'];
+    }
+    
+    // Get total scholarships count
+    $scholarships_count = 0;
+    $count_sql = "SELECT COUNT(*) as count FROM scholarships WHERE status = 'active'";
+    $count_result = $conn->query($count_sql);
+    if ($count_result) {
+        $scholarships_count = $count_result->fetch_assoc()['count'];
+    }
+    
+    $conn->close();
+}
 ?>
-<div class="sidebar">
-    <div class="sidebar-header">
-        <i class="fa fa-graduation-cap"></i>
-        <span>Admin Panel</span>
-    </div>
-    <div class="sidebar-menu">
-        <a href="scholarship_admin_dashboard.php" class="menu-item" id="dashboard">
-            <i class="fas fa-tachometer-alt"></i> Dashboard
-        </a>
-        <a href="admin_manage_scholarships.php" class="menu-item" id="manage-scholars">
-            <i class="fas fa-graduation-cap"></i> Manage Scholarships
-        </a>
-        <a href="manage_applications.php" class="menu-item" id="applications">
-            <i class="fas fa-file-alt"></i> Applications
-        </a>
-        <a href="approved_scholars.php" class="menu-item" id="approved-scholars">
-            <i class="fas fa-check-circle"></i> Approved Scholars
-        </a>
-        <a href="login.php" class="logout-btn">
-            <i class="fas fa-sign-out-alt"></i> Logout
-        </a>
-    </div>
-</div>
 
 <style>
     * {
@@ -137,17 +144,13 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role
         }
     }
 
-    /* New Admin Header Additions */
+    /* Simple Admin Header Styles */
     .admin-header {
         background: linear-gradient(135deg, #003366, #004080);
         color: white;
         padding: 20px;
         margin-bottom: 20px;
         border-radius: 10px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-
-    .admin-header-content {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -155,53 +158,33 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role
         gap: 20px;
     }
 
-    .admin-info {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-    }
-
-    .admin-avatar {
-        width: 50px;
-        height: 50px;
-        background: #FFD700;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #003366;
-        font-weight: bold;
-        font-size: 18px;
-    }
-
-    .admin-details h3 {
+    .admin-info h3 {
         margin: 0;
-        font-size: 1.3rem;
         color: #FFD700;
+        font-size: 1.4rem;
     }
 
-    .admin-details p {
+    .admin-info p {
         margin: 5px 0 0 0;
         opacity: 0.9;
-        font-size: 0.9rem;
     }
 
-    .quick-stats {
+    .admin-stats {
         display: flex;
         gap: 20px;
         flex-wrap: wrap;
     }
 
-    .stat-card {
+    .stat-item {
+        text-align: center;
         background: rgba(255, 255, 255, 0.1);
         padding: 15px 20px;
         border-radius: 8px;
-        text-align: center;
-        min-width: 120px;
         border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
     .stat-number {
+        display: block;
         font-size: 1.8rem;
         font-weight: bold;
         color: #FFD700;
@@ -213,203 +196,58 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role
         opacity: 0.9;
     }
 
-    .admin-actions {
-        display: flex;
-        gap: 15px;
-        align-items: center;
-    }
-
-    .action-btn {
-        background: #FFD700;
-        color: #003366;
-        border: none;
-        padding: 10px 15px;
-        border-radius: 20px;
-        cursor: pointer;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .action-btn:hover {
-        background: #FFA500;
-        transform: scale(1.05);
-    }
-
-    .notifications-btn {
-        position: relative;
-        background: transparent;
-        border: 2px solid #FFD700;
-        color: #FFD700;
-    }
-
-    .notifications-btn:hover {
-        background: #FFD700;
-        color: #003366;
-    }
-
-    .notification-badge {
-        position: absolute;
-        top: -8px;
-        right: -8px;
-        background: #ff4444;
-        color: white;
-        border-radius: 50%;
-        width: 20px;
-        height: 20px;
-        font-size: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-    }
-
-    .dropdown-panel {
-        position: absolute;
-        top: 100%;
-        right: 0;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-        min-width: 250px;
-        display: none;
-        z-index: 1000;
-        margin-top: 5px;
-    }
-
-    .dropdown-panel.active {
-        display: block;
-    }
-
-    .dropdown-header {
-        background: #003366;
-        color: white;
-        padding: 15px 20px;
-        border-radius: 8px 8px 0 0;
-        font-weight: bold;
-        text-align: center;
-    }
-
-    .dropdown-item {
-        padding: 12px 20px;
-        border-bottom: 1px solid #eee;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        color: #333;
-        text-decoration: none;
-        transition: 0.3s ease;
-    }
-
-    .dropdown-item:last-child {
-        border-bottom: none;
-    }
-
-    .dropdown-item:hover {
-        background: #f8f9fa;
-        color: #003366;
-    }
-
     @media (max-width: 768px) {
-        .admin-header-content {
+        .admin-header {
             flex-direction: column;
             text-align: center;
         }
         
-        .admin-info {
+        .admin-stats {
             justify-content: center;
-        }
-        
-        .quick-stats {
-            justify-content: center;
-        }
-        
-        .admin-actions {
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        
-        .dropdown-panel {
-            position: relative;
-            top: auto;
-            right: auto;
-            margin-top: 10px;
         }
     }
 </style>
 
-<!-- Admin Header Section -->
+<!-- Simple Admin Header -->
 <div class="admin-header">
-    <div class="admin-header-content">
-        <div class="admin-info">
-            <div class="admin-avatar">
-                <?php
-                $admin_initials = '';
-                if (isset($_SESSION['first_name']) && isset($_SESSION['last_name'])) {
-                    $admin_initials = strtoupper(substr($_SESSION['first_name'], 0, 1) . substr($_SESSION['last_name'], 0, 1));
-                } else {
-                    $admin_initials = 'A';
-                }
-                echo $admin_initials;
-                ?>
-            </div>
-            <div class="admin-details">
-                <h3><?= $_SESSION['first_name'] ?? 'Administrator' ?> <?= $_SESSION['last_name'] ?? '' ?></h3>
-                <p><i class="fas fa-shield-alt"></i> <?= ucfirst($_SESSION['role'] ?? 'Admin') ?> - Scholarship Office</p>
-            </div>
+    <div class="admin-info">
+        <h3>Welcome, <?= $_SESSION['first_name'] ?? 'Administrator' ?>!</h3>
+        <p>Scholarship Office Dashboard</p>
+    </div>
+    <div class="admin-stats">
+        <div class="stat-item">
+            <span class="stat-number"><?= $pending_count ?></span>
+            <span class="stat-label">Pending Applications</span>
         </div>
-
-        <div class="quick-stats">
-            <div class="stat-card">
-                <div class="stat-number"><?= $pending_count ?? 0 ?></div>
-                <div class="stat-label">Pending Apps</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number"><?= $scholarships_count ?? 0 ?></div>
-                <div class="stat-label">Active Scholarships</div>
-            </div>
-        </div>
-
-        <div class="admin-actions">
-            <button class="action-btn notifications-btn" id="notificationsBtn">
-                <i class="fas fa-bell"></i> Notifications
-                <?php if (isset($admin_notification_count) && $admin_notification_count > 0): ?>
-                    <span class="notification-badge"><?= $admin_notification_count ?></span>
-                <?php endif; ?>
-            </button>
-            <a href="enhanced_admin_scholarships.php" class="action-btn">
-                <i class="fas fa-plus"></i> Add Scholarship
-            </a>
-            <a href="enhanced_scholarship_reports.php" class="action-btn">
-                <i class="fas fa-chart-bar"></i> Reports
-            </a>
+        <div class="stat-item">
+            <span class="stat-number"><?= $scholarships_count ?></span>
+            <span class="stat-label">Active Scholarships</span>
         </div>
     </div>
 </div>
 
-<!-- Notifications Panel -->
-<div class="dropdown-panel" id="notificationsPanel">
-    <div class="dropdown-header">
-        <i class="fas fa-bell"></i> System Notifications
+<div class="sidebar">
+    <div class="sidebar-header">
+        <i class="fa fa-graduation-cap"></i>
+        <span>Admin Panel</span>
     </div>
-    <?php if (isset($admin_notification_count) && $admin_notification_count > 0): ?>
-        <a href="view_admin_notifications.php" class="dropdown-item">
-            <i class="fas fa-envelope"></i> View All (<?= $admin_notification_count ?> new)
+    <div class="sidebar-menu">
+        <a href="scholarship_admin_dashboard.php" class="menu-item" id="dashboard">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
         </a>
-    <?php else: ?>
-        <div class="dropdown-item">
-            <i class="fas fa-check-circle"></i> No new notifications
-        </div>
-    <?php endif; ?>
-    <a href="system_logs.php" class="dropdown-item">
-        <i class="fas fa-list"></i> System Logs
-    </a>
-    <a href="audit_trail.php" class="dropdown-item">
-        <i class="fas fa-history"></i> Audit Trail
-    </a>
+        <a href="admin_manage_scholarships.php" class="menu-item" id="manage-scholars">
+            <i class="fas fa-graduation-cap"></i> Manage Scholarships
+        </a>
+        <a href="manage_applications.php" class="menu-item" id="applications">
+            <i class="fas fa-file-alt"></i> Applications
+        </a>
+        <a href="approved_scholars.php" class="menu-item" id="approved-scholars">
+            <i class="fas fa-check-circle"></i> Approved Scholars
+        </a>
+        <a href="login.php" class="logout-btn">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+    </div>
 </div>
 
 <script>
@@ -422,35 +260,5 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role
                 item.classList.add('active');
             }
         });
-
-        // New Admin Header Features
-        const notificationsBtn = document.getElementById('notificationsBtn');
-        const notificationsPanel = document.getElementById('notificationsPanel');
-
-        // Notifications Panel Toggle
-        notificationsBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            notificationsPanel.classList.toggle('active');
-        });
-
-        // Close notifications panel when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!notificationsBtn.contains(e.target) && !notificationsPanel.contains(e.target)) {
-                notificationsPanel.classList.remove('active');
-            }
-        });
-
-        // Close notifications panel on escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                notificationsPanel.classList.remove('active');
-            }
-        });
-
-        // Auto-refresh stats every 30 seconds
-        setInterval(function() {
-            // You can add AJAX call here to refresh stats
-            // For now, just a placeholder
-        }, 30000);
     });
 </script>
