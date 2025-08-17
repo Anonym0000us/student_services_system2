@@ -61,15 +61,13 @@ if (!isset($_SESSION['csrf_token'])) { $_SESSION['csrf_token'] = bin2hex(random_
           </div>
           <div class="mb-3">
             <label class="form-label">Counselor</label>
-            <select class="form-select" name="counselor_id" required>
-              <?php
-              $counselors = $conn->query("SELECT user_id, TRIM(CONCAT(first_name,' ',last_name)) AS name FROM users WHERE role IN ('Guidance Admin','Counselor') AND status='Active' ORDER BY name");
-              while($c = $counselors->fetch_assoc()){
-                $sel = ($c['user_id'] === $_SESSION['user_id']) ? ' selected' : '';
-                echo '<option value="'.htmlspecialchars($c['user_id']).'"'.$sel.'>'.htmlspecialchars($c['name']).' ('.htmlspecialchars($c['user_id']).')</option>';
-              }
-              ?>
-            </select>
+            <?php
+            $cname = '';
+            $me = $conn->prepare("SELECT TRIM(CONCAT(first_name,' ',last_name)) AS name FROM users WHERE user_id = ?");
+            if ($me) { $me->bind_param('s', $_SESSION['user_id']); $me->execute(); $r=$me->get_result()->fetch_assoc(); if($r){ $cname=$r['name']; } }
+            ?>
+            <input type="hidden" name="counselor_id" value="<?= htmlspecialchars($_SESSION['user_id']) ?>">
+            <input type="text" class="form-control" value="<?= htmlspecialchars($cname ?: $_SESSION['user_id']) ?>" disabled>
           </div>
           <div class="mb-3">
             <label class="form-label">Date & Time</label>
@@ -104,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const datetime = form.elements['datetime'].value;
     const reason = form.elements['reason'].value.trim();
     if(!studentId){ alert('Please enter a valid student ID.'); return; }
-    if(!counselorId){ alert('Please select a counselor.'); return; }
+    if(!counselorId){ alert('Counselor is not set.'); return; }
     if(!datetime){ alert('Please select date & time'); return; }
 
     // Disable button with spinner
