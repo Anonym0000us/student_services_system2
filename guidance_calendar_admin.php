@@ -25,7 +25,7 @@ if (!isset($_SESSION['csrf_token'])) { $_SESSION['csrf_token'] = bin2hex(random_
   <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h3 class="mb-0">Appointments Calendar</h3>
-      <button class="btn btn-primary" id="btnNew">New Appointment</button>
+      <button class="btn btn-primary" id="btnNew" data-bs-toggle="modal" data-bs-target="#newApptModal">New Appointment</button>
     </div>
     <div id="calendar"></div>
   </div>
@@ -102,8 +102,9 @@ document.addEventListener('DOMContentLoaded', function() {
   window.addEventListener('resize', ()=> cal.updateSize());
 
   // New appointment modal
-  const modal = new bootstrap.Modal(document.getElementById('newApptModal'));
-  document.getElementById('btnNew').addEventListener('click', ()=> modal.show());
+  // Modal is toggled via data attributes; keep reference if needed
+  const modalEl = document.getElementById('newApptModal');
+  const modal = new bootstrap.Modal(modalEl);
   document.getElementById('saveAppt').addEventListener('click', ()=>{
     const form = document.getElementById('newApptForm');
     const data = new FormData(form);
