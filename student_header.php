@@ -227,7 +227,7 @@ if (!isset($_SESSION['user_id'])) {
                 <div class="sub-dropdown">
                     <a href="#">🎓 Scholarship</a>
                     <div class="sub-dropdown-content">
-                        <a href="enhanced_scholarships.php">📝 Apply</a>
+                        <a href="scholarships.php">📝 Apply</a>
                         <a href="track_applications.php">📊 Status</a>
                         <a href="scholarship_resources.php">📚 Resources</a>
                     </div>
