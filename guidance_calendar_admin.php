@@ -92,35 +92,67 @@ if (!isset($_SESSION['csrf_token'])) { $_SESSION['csrf_token'] = bin2hex(random_
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  const calEl = document.getElementById('calendar');
-  const cal=new FullCalendar.Calendar(calEl,{
-    initialView:'timeGridWeek', editable:true, eventOverlap:false, height:'auto',
-    events:'guidance_calendar_admin_events.php',
-    eventDrop:(info)=>update(info), eventResize:(info)=>update(info)
-  });
-  function update(info){
-    const p=new URLSearchParams({ id: info.event.id, start: info.event.start.toISOString(), csrf_token: '<?= $_SESSION['csrf_token'] ?>' });
-    fetch('admin_update_appointment.php',{ method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: p })
-      .then(r=>r.json()).then(d=>{ if(!d.success){ alert(d.message||'Update failed'); info.revert(); } else { cal.refetchEvents(); } });
-  }
-  cal.render();
-  window.addEventListener('resize', ()=> cal.updateSize());
-
   const modalEl = document.getElementById('newApptModal');
   const modal = new bootstrap.Modal(modalEl);
-  document.getElementById('saveAppt').addEventListener('click', ()=>{
+  const saveBtn = document.getElementById('saveAppt');
+
+  // Attach handler first so it works even if calendar fails to load
+  saveBtn.addEventListener('click', async ()=>{
     const form = document.getElementById('newApptForm');
-    const data = new FormData(form);
+    const studentId = form.elements['student_id'].value.trim();
+    const counselorId = form.elements['counselor_id'].value;
     const datetime = form.elements['datetime'].value;
+    const reason = form.elements['reason'].value.trim();
+    if(!studentId){ alert('Please enter a valid student ID.'); return; }
+    if(!counselorId){ alert('Please select a counselor.'); return; }
     if(!datetime){ alert('Please select date & time'); return; }
-    const body = new URLSearchParams();
-    for (const [k,v] of data.entries()) body.append(k, v);
-    fetch('admin_create_appointment.php',{ method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body })
-      .then(r=>r.json()).then(d=>{
-        alert(d.message||'Saved');
-        if(d.success){ modal.hide(); cal.refetchEvents(); }
-      }).catch(()=> alert('Network error'));
+
+    // Disable button with spinner
+    saveBtn.disabled = true;
+    const originalHtml = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving';
+
+    try {
+      const body = new URLSearchParams();
+      body.append('csrf_token', form.elements['csrf_token'].value);
+      body.append('student_id', studentId);
+      body.append('counselor_id', counselorId);
+      body.append('datetime', datetime);
+      body.append('reason', reason);
+
+      const r = await fetch('admin_create_appointment.php', { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body });
+      let data;
+      try { data = await r.json(); }
+      catch (e) { data = { success:false, message: (await r.text()) || 'Server error' }; }
+      alert(data.message || (data.success ? 'Saved' : 'Failed'));
+      if (data.success) { modal.hide(); try { cal.refetchEvents(); } catch(_){} }
+    } catch(err){
+      alert('Network error');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = originalHtml;
+    }
   });
+
+  // Calendar init
+  let cal;
+  try {
+    const calEl = document.getElementById('calendar');
+    cal=new FullCalendar.Calendar(calEl,{
+      initialView:'timeGridWeek', editable:true, eventOverlap:false, height:'auto',
+      events:'guidance_calendar_admin_events.php',
+      eventDrop:(info)=>update(info), eventResize:(info)=>update(info)
+    });
+    function update(info){
+      const p=new URLSearchParams({ id: info.event.id, start: info.event.start.toISOString(), csrf_token: '<?= $_SESSION['csrf_token'] ?>' });
+      fetch('admin_update_appointment.php',{ method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: p })
+        .then(r=>r.json()).then(d=>{ if(!d.success){ alert(d.message||'Update failed'); info.revert(); } else { cal.refetchEvents(); } });
+    }
+    cal.render();
+    window.addEventListener('resize', ()=> cal.updateSize());
+  } catch (e) {
+    console.warn('Calendar failed to initialize:', e);
+  }
 });
 </script>
 </body>
