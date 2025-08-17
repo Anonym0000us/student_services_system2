@@ -227,7 +227,6 @@
                 <div class="sub-dropdown">
                     <a href="#">🗣️ Guidance</a>
                     <div class="sub-dropdown-content">
-                        <a href="guidance_booking.php">📅 Book via Calendar</a>
                         <a href="guidance_request.php">📝 Request Form</a>
                         <a href="student_status_appointments.php">📋 Appointment Status</a>
                         <a href="guidance_counseling.php">🗣️ Counseling</a>
