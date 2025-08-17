@@ -43,15 +43,21 @@ if (!isset($_SESSION['csrf_token'])) { $_SESSION['csrf_token'] = bin2hex(random_
         <form id="newApptForm">
           <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
           <div class="mb-3">
-            <label class="form-label">Student</label>
-            <select class="form-select" name="student_id" required>
+            <label class="form-label">Student (type ID or pick)</label>
+            <input class="form-control" name="student_id" list="studentsList" placeholder="e.g., 2023-0001" required>
+            <datalist id="studentsList">
               <?php
               $students = $conn->query("SELECT user_id, TRIM(CONCAT(first_name,' ',last_name)) AS name FROM users WHERE role='Student' AND status='Active' ORDER BY name LIMIT 200");
-              while($s = $students->fetch_assoc()){
-                echo '<option value="'.htmlspecialchars($s['user_id']).'">'.htmlspecialchars($s['name']).' ('.htmlspecialchars($s['user_id']).')</option>';
+              if ($students && $students->num_rows) {
+                while($s = $students->fetch_assoc()){
+                  echo '<option value="'.htmlspecialchars($s['user_id']).'">'.htmlspecialchars($s['name']).' ('.htmlspecialchars($s['user_id']).')</option>';
+                }
               }
               ?>
-            </select>
+            </datalist>
+            <?php if (!$students || !$students->num_rows): ?>
+              <small class="text-muted">No active students found. You can still type a student ID if known.</small>
+            <?php endif; ?>
           </div>
           <div class="mb-3">
             <label class="form-label">Counselor</label>
@@ -98,11 +104,8 @@ document.addEventListener('DOMContentLoaded', function() {
       .then(r=>r.json()).then(d=>{ if(!d.success){ alert(d.message||'Update failed'); info.revert(); } else { cal.refetchEvents(); } });
   }
   cal.render();
-  // Resize calendar when window changes size to fit screen
   window.addEventListener('resize', ()=> cal.updateSize());
 
-  // New appointment modal
-  // Modal is toggled via data attributes; keep reference if needed
   const modalEl = document.getElementById('newApptModal');
   const modal = new bootstrap.Modal(modalEl);
   document.getElementById('saveAppt').addEventListener('click', ()=>{
