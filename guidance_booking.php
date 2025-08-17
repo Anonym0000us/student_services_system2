@@ -21,21 +21,27 @@ if (!isset($_SESSION['csrf_token'])) { $_SESSION['csrf_token'] = bin2hex(random_
   <div class="row g-3">
     <div class="col-md-3">
       <label class="form-label">Counselor</label>
-      <select class="form-select" id="counselor_id">
-        <?php
-        $res=$conn->query("SELECT user_id AS id, TRIM(CONCAT(first_name,' ',last_name)) AS name FROM users WHERE role IN ('Guidance Admin','Counselor') AND status='Active' ORDER BY name");
-        $hasCounselor = $res && $res->num_rows > 0;
-        if ($hasCounselor) {
+      <?php
+      $qry=$conn->query("SELECT user_id AS id, TRIM(CONCAT(first_name,' ',last_name)) AS name FROM users WHERE role IN ('Guidance Admin','Counselor') AND status='Active' ORDER BY name");
+      $count = $qry ? $qry->num_rows : 0;
+      if ($count === 1) {
+        $single = $qry->fetch_assoc();
+        echo '<input type="hidden" id="single_cid" value="'.htmlspecialchars($single['id']).'">';
+        echo '<input type="text" class="form-control" value="'.htmlspecialchars($single['name']).'" disabled>';
+      } else {
+        echo '<select class="form-select" id="counselor_id">';
+        if ($count > 0) {
           echo '<option value="">— Select counselor —</option>';
-          while($c=$res->fetch_assoc()){ echo '<option value="'.htmlspecialchars($c['id']).'">'.htmlspecialchars($c['name']).'</option>'; }
+          while($c=$qry->fetch_assoc()){ echo '<option value="'.htmlspecialchars($c['id']).'">'.htmlspecialchars($c['name']).'</option>'; }
         } else {
           echo '<option value="" selected disabled>No active counselors</option>';
         }
-        ?>
-      </select>
-      <?php if (!$hasCounselor): ?>
-      <div class="alert alert-warning mt-3" role="alert">No active counselors available. Please contact the Guidance Office.</div>
-      <?php endif; ?>
+        echo '</select>';
+        if ($count === 0) {
+          echo '<div class="alert alert-warning mt-3" role="alert">No active counselors available. Please contact the Guidance Office.</div>';
+        }
+      }
+      ?>
       <div class="mt-3">
         <label class="form-label">Reason (optional)</label>
         <textarea class="form-control" id="reason" rows="3" placeholder="Briefly describe your concern..."></textarea>
@@ -49,8 +55,14 @@ if (!isset($_SESSION['csrf_token'])) { $_SESSION['csrf_token'] = bin2hex(random_
 </div>
 <script>
 let calendar;
+function getCounselorId(){
+  const hidden = document.getElementById('single_cid');
+  if (hidden) return hidden.value;
+  const sel = document.getElementById('counselor_id');
+  return sel ? sel.value : '';
+}
 function requestBooking(dateObj){
-  const cid=document.getElementById('counselor_id').value;
+  const cid=getCounselorId();
   const reason=document.getElementById('reason').value.trim();
   if(!cid){ alert('Please select a counselor.'); return; }
   if(dateObj < new Date()){ alert('Please choose a future time.'); return; }
@@ -67,7 +79,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initialView:'timeGridWeek', nowIndicator:true, selectable:true, height:'auto',
     slotDuration:'00:30:00', snapDuration:'00:30:00',
     events: (info, success) => {
-      const cid=document.getElementById('counselor_id').value;
+      const cid=getCounselorId();
       if(!cid){ success([]); return; }
       fetch(`guidance_calendar_events.php?counselor_id=${encodeURIComponent(cid)}&start=${encodeURIComponent(info.startStr)}&end=${encodeURIComponent(info.endStr)}`)
         .then(r=>r.json()).then(success).catch(()=>success([]));
@@ -76,7 +88,8 @@ document.addEventListener('DOMContentLoaded', function() {
     dateClick: (info)=>{ requestBooking(info.date); }
   });
   calendar.render();
-  document.getElementById('counselor_id').addEventListener('change', ()=>calendar.refetchEvents());
+  const sel = document.getElementById('counselor_id');
+  if (sel) sel.addEventListener('change', ()=>calendar.refetchEvents());
 });
 </script>
 </body>
