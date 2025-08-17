@@ -24,9 +24,18 @@ if (!isset($_SESSION['csrf_token'])) { $_SESSION['csrf_token'] = bin2hex(random_
       <select class="form-select" id="counselor_id">
         <?php
         $res=$conn->query("SELECT user_id AS id, TRIM(CONCAT(first_name,' ',last_name)) AS name FROM users WHERE role IN ('Guidance Admin','Counselor') AND status='Active' ORDER BY name");
-        while($c=$res->fetch_assoc()){ echo '<option value="'.htmlspecialchars($c['id']).'">'.htmlspecialchars($c['name']).'</option>'; }
+        $hasCounselor = $res && $res->num_rows > 0;
+        if ($hasCounselor) {
+          echo '<option value="">— Select counselor —</option>';
+          while($c=$res->fetch_assoc()){ echo '<option value="'.htmlspecialchars($c['id']).'">'.htmlspecialchars($c['name']).'</option>'; }
+        } else {
+          echo '<option value="" selected disabled>No active counselors</option>';
+        }
         ?>
       </select>
+      <?php if (!$hasCounselor): ?>
+      <div class="alert alert-warning mt-3" role="alert">No active counselors available. Please contact the Guidance Office.</div>
+      <?php endif; ?>
       <div class="mt-3">
         <label class="form-label">Reason (optional)</label>
         <textarea class="form-control" id="reason" rows="3" placeholder="Briefly describe your concern..."></textarea>
@@ -59,6 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
     slotDuration:'00:30:00', snapDuration:'00:30:00',
     events: (info, success) => {
       const cid=document.getElementById('counselor_id').value;
+      if(!cid){ success([]); return; }
       fetch(`guidance_calendar_events.php?counselor_id=${encodeURIComponent(cid)}&start=${encodeURIComponent(info.startStr)}&end=${encodeURIComponent(info.endStr)}`)
         .then(r=>r.json()).then(success).catch(()=>success([]));
     },
