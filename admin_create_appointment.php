@@ -22,6 +22,6 @@ $chk->execute(); $c=$chk->get_result()->fetch_assoc()['c'] ?? 0;
 if ($c > 0) { echo json_encode(['success'=>false,'message'=>'Counselor slot is already booked.']); exit; }
 
 $stmt=$conn->prepare("INSERT INTO appointments (student_id, user_id, appointment_date, reason, status) VALUES (?, ?, ?, ?, 'approved')");
-$stmt->bind_param('isss', $student_id, $counselor_id, $startStr, $reason);
+$stmt->bind_param('ssss', $student_id, $counselor_id, $startStr, $reason);
 $ok=$stmt->execute();
 echo json_encode(['success'=>$ok, 'message'=>$ok?'Appointment created.':'Failed to create appointment']);
