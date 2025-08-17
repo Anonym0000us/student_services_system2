@@ -11,7 +11,7 @@ if (!$id || $start===''){ http_response_code(400); echo json_encode(['success'=>
 try{ $dt=new DateTime($start); } catch(Exception $e){ http_response_code(400); echo json_encode(['success'=>false,'message'=>'Invalid date']); exit; }
 $date=$dt->format('Y-m-d H:i:s');
 
-$stmt=$conn->prepare("UPDATE appointments SET appointment_date=? WHERE id=? AND status IN ('pending','approved')");
+$stmt=$conn->prepare("UPDATE appointments SET appointment_date=? WHERE id=? AND status IN ('pending','approved','Pending','Approved')");
 $stmt->bind_param('si', $date, $id);
 $ok=$stmt->execute();
 echo json_encode(['success'=>$ok, 'message'=>$ok?'Updated':'Update failed']);

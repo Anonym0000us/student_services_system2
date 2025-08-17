@@ -14,7 +14,7 @@ $query = "SELECT appointments.*, students.first_name AS student_first_name, stud
           FROM appointments
           JOIN users AS students ON appointments.student_id = students.user_id
           WHERE appointments.user_id = ?
-          ORDER BY appointments.appointment_date DESC"; // Filter by the logged-in admin's ID
+          ORDER BY COALESCE(appointments.appointment_date, appointments.id) DESC"; // Filter by the logged-in admin's ID
 $stmt = $conn->prepare($query);
 $stmt->bind_param("s", $user_id); // Bind the admin ID to the query
 $stmt->execute();

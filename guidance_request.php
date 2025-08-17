@@ -24,7 +24,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $error_message = "Please provide a valid date/time and a brief reason (min 10 characters).";
         } else {
             // Normalize datetime (from input type=datetime-local -> YYYY-MM-DDTHH:MM)
-            $appointment_date = $appointment_date_raw;
+            // Normalize to MySQL DATETIME
+            try {
+                $dtIn = new DateTime($appointment_date_raw);
+                $appointment_date = $dtIn->format('Y-m-d H:i:00');
+            } catch (Exception $e) {
+                $error_message = "Invalid date/time format.";
+                $appointment_date = null;
+            }
             // Pick a guidance admin/counselor to assign
             $guidance_admin_id = null;
             $sel = $conn->prepare("SELECT user_id FROM users WHERE role IN ('Guidance Admin','Counselor') AND status = 'Active' ORDER BY role = 'Guidance Admin' DESC, user_id ASC LIMIT 1");
@@ -39,7 +46,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             // Insert query (keep existing schema)
             $insertQuery = "INSERT INTO appointments (student_id, user_id, appointment_date, reason) VALUES (?, ?, ?, ?)";
             $stmt = $conn->prepare($insertQuery);
-            if ($stmt) {
+            if ($stmt && $appointment_date) {
                 $stmt->bind_param("ssss", $student_id, $guidance_admin_id, $appointment_date, $reason);
                 if ($stmt->execute()) {
                     $success_message = "Guidance request submitted successfully.";

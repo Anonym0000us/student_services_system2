@@ -8,7 +8,7 @@ $start = $_GET['start'] ?? '';
 $end = $_GET['end'] ?? '';
 if ($counselor_id === '' || $start === '' || $end === '') { echo json_encode([]); exit; }
 
-$stmt=$conn->prepare("SELECT id, appointment_date, status FROM appointments WHERE user_id = ? AND appointment_date BETWEEN ? AND ?");
+$stmt=$conn->prepare("SELECT id, appointment_date, status FROM appointments WHERE user_id = ? AND appointment_date >= ? AND appointment_date < ?");
 $stmt->bind_param('sss', $counselor_id, $start, $end);
 $stmt->execute();
 $res=$stmt->get_result();

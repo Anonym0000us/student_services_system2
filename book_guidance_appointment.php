@@ -16,7 +16,7 @@ $startStr = $dt->format('Y-m-d H:i:s');
 $endStr = $dt->modify('+1 hour')->format('Y-m-d H:i:s');
 
 // Check for conflicts for counselor
-$chk=$conn->prepare("SELECT COUNT(*) AS c FROM appointments WHERE user_id=? AND appointment_date BETWEEN ? AND DATE_SUB(?, INTERVAL 1 SECOND)");
+$chk=$conn->prepare("SELECT COUNT(*) AS c FROM appointments WHERE user_id=? AND appointment_date < ? AND DATE_ADD(appointment_date, INTERVAL 1 HOUR) > ?");
 $chk->bind_param('sss', $counselor_id, $startStr, $endStr);
 $chk->execute(); $c=$chk->get_result()->fetch_assoc()['c'] ?? 0;
 if ($c > 0) { echo json_encode(['success'=>false,'message'=>'Slot is already booked.']); exit; }
