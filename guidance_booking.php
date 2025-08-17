@@ -31,7 +31,7 @@ if (!isset($_SESSION['csrf_token'])) { $_SESSION['csrf_token'] = bin2hex(random_
         <label class="form-label">Reason (optional)</label>
         <textarea class="form-control" id="reason" rows="3" placeholder="Briefly describe your concern..."></textarea>
       </div>
-      <div class="mt-3 small text-muted">Select a green-free slot on the calendar to request a booking. Standard session length is 60 minutes.</div>
+      <div class="mt-3 small text-muted">Click a time slot on the calendar to request a 60-minute session.</div>
     </div>
     <div class="col-md-9">
       <div id="calendar"></div>
@@ -40,26 +40,30 @@ if (!isset($_SESSION['csrf_token'])) { $_SESSION['csrf_token'] = bin2hex(random_
 </div>
 <script>
 let calendar;
+function requestBooking(dateObj){
+  const cid=document.getElementById('counselor_id').value;
+  const reason=document.getElementById('reason').value.trim();
+  if(!cid){ alert('Please select a counselor.'); return; }
+  if(dateObj < new Date()){ alert('Please choose a future time.'); return; }
+  if(!confirm(`Request ${dateObj.toLocaleString()} with selected counselor?`)) return;
+  const body=new URLSearchParams({ counselor_id: cid, start: dateObj.toISOString(), reason, csrf_token: '<?= htmlspecialchars($_SESSION['csrf_token']) ?>' });
+  fetch('book_guidance_appointment.php',{ method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body })
+    .then(r=>r.json()).then(d=>{ alert(d.message||'Done'); if(d.success){ calendar.refetchEvents(); } })
+    .catch(()=> alert('Network error'));
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   const el=document.getElementById('calendar');
   calendar=new FullCalendar.Calendar(el,{
     initialView:'timeGridWeek', nowIndicator:true, selectable:true, height:'auto',
-    businessHours: { daysOfWeek:[1,2,3,4,5], startTime:'08:00', endTime:'17:00' },
+    slotDuration:'00:30:00', snapDuration:'00:30:00',
     events: (info, success) => {
       const cid=document.getElementById('counselor_id').value;
       fetch(`guidance_calendar_events.php?counselor_id=${encodeURIComponent(cid)}&start=${encodeURIComponent(info.startStr)}&end=${encodeURIComponent(info.endStr)}`)
-        .then(r=>r.json()).then(success);
+        .then(r=>r.json()).then(success).catch(()=>success([]));
     },
-    select: (sel)=>{
-      const cid=document.getElementById('counselor_id').value;
-      const reason=document.getElementById('reason').value.trim();
-      if(!cid){ alert('Please select a counselor.'); return; }
-      if(sel.start < new Date()){ alert('Please choose a future time.'); return; }
-      if(!confirm(`Request ${sel.start.toLocaleString()} with selected counselor?`)) return;
-      const body=new URLSearchParams({ counselor_id: cid, start: sel.start.toISOString(), reason, csrf_token: '<?= htmlspecialchars($_SESSION['csrf_token']) ?>' });
-      fetch('book_guidance_appointment.php',{ method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body })
-        .then(r=>r.json()).then(d=>{ alert(d.message||'Done'); if(d.success){ calendar.refetchEvents(); } });
-    }
+    select: (sel)=>{ requestBooking(sel.start); },
+    dateClick: (info)=>{ requestBooking(info.date); }
   });
   calendar.render();
   document.getElementById('counselor_id').addEventListener('change', ()=>calendar.refetchEvents());
