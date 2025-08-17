@@ -44,7 +44,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
 
             // Insert query (keep existing schema)
-            $insertQuery = "INSERT INTO appointments (student_id, user_id, appointment_date, reason) VALUES (?, ?, ?, ?)";
+            $insertQuery = "INSERT INTO appointments (student_id, user_id, appointment_date, reason, status) VALUES (?, ?, ?, ?, 'pending')";
             $stmt = $conn->prepare($insertQuery);
             if ($stmt && $appointment_date) {
                 $stmt->bind_param("ssss", $student_id, $guidance_admin_id, $appointment_date, $reason);

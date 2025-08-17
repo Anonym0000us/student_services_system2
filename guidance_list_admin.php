@@ -193,7 +193,11 @@ if (!isset($_SESSION['csrf_token'])) {
                             </td>
                             <td><?= htmlspecialchars($row['admin_message']) ?></td>
                             <td>
-                                <button class="action-link" onclick="openUpdateModal('<?= htmlspecialchars($row['id']) ?>', '<?= htmlspecialchars($row['status']) ?>')">Update Status</button>
+                                <button class="action-link" onclick="openUpdateModal('<?= htmlspecialchars($row['id']) ?>', '<?= htmlspecialchars($row['status']) ?>')">Update</button>
+                                <button class="action-link" onclick="openScheduleModal('<?= htmlspecialchars($row['id']) ?>')">Schedule</button>
+                                <?php if (strtolower($row['status']) === 'approved'): ?>
+                                <button class="action-link" style="background:#0d6efd" onclick="markCompleted('<?= htmlspecialchars($row['id']) ?>')">Complete</button>
+                                <?php endif; ?>
                                 <button class="delete-link" onclick="openDeleteModal('<?= htmlspecialchars($row['id']) ?>')">Delete</button>
                             </td>
                         </tr>
@@ -228,6 +232,27 @@ if (!isset($_SESSION['csrf_token'])) {
             </div>
         </div>
 
+        <!-- Schedule Modal -->
+        <div id="scheduleModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('scheduleModal')">&times;</span>
+                <h2>Schedule Appointment</h2>
+                <form id="scheduleForm">
+                    <input type="hidden" id="schedule_request_id" name="id">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                    <div class="mb-3">
+                        <label class="form-label">Date & Time</label>
+                        <input type="datetime-local" class="form-control" name="datetime" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Admin Message (optional)</label>
+                        <textarea class="form-control" name="admin_message" rows="2"></textarea>
+                    </div>
+                    <button type="button" onclick="submitSchedule()">Save</button>
+                </form>
+            </div>
+        </div>
+
         <!-- Delete Modal -->
         <div id="deleteModal" class="modal">
             <div class="modal-content">
@@ -250,6 +275,24 @@ if (!isset($_SESSION['csrf_token'])) {
             document.getElementById('updateModal').style.display = "flex";
         }
 
+        function openScheduleModal(request_id){
+            document.getElementById('schedule_request_id').value = request_id;
+            document.getElementById('scheduleModal').style.display = 'flex';
+        }
+        function submitSchedule(){
+            const form = document.getElementById('scheduleForm');
+            const data = new URLSearchParams(new FormData(form));
+            fetch('admin_schedule_appointment.php', { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: data })
+              .then(r=>r.json()).then(d=>{ alert(d.message||'Updated'); if(d.success) location.reload(); });
+        }
+
+        function markCompleted(request_id){
+            if(!confirm('Mark as completed?')) return;
+            const data = new URLSearchParams({ request_id, status:'completed', admin_message:'', update_status:'1', csrf_token: '<?= htmlspecialchars($_SESSION['csrf_token']) ?>' });
+            fetch('update_guidance_status.php', { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: data })
+              .then(r=>r.text()).then(()=> location.reload());
+        }
+
         function openDeleteModal(request_id) {
             document.getElementById('delete_request_id').value = request_id;
             document.getElementById('deleteModal').style.display = "flex";
@@ -264,6 +307,8 @@ if (!isset($_SESSION['csrf_token'])) {
                 closeModal('updateModal');
             } else if (event.target == document.getElementById('deleteModal')) {
                 closeModal('deleteModal');
+            } else if (event.target == document.getElementById('scheduleModal')) {
+                closeModal('scheduleModal');
             }
         }
     </script>
