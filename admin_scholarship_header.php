@@ -1,3 +1,12 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+    header('Location: login.php');
+    exit();
+}
+?>
 <div class="sidebar">
     <div class="sidebar-header">
         <i class="fa fa-graduation-cap"></i>
@@ -7,10 +16,10 @@
         <a href="scholarship_admin_dashboard.php" class="menu-item" id="dashboard">
             <i class="fas fa-tachometer-alt"></i> Dashboard
         </a>
-        <a href="admin_manage_scholarships.php" class="menu-item" id="manage-scholars">
+        <a href="enhanced_admin_scholarships.php" class="menu-item" id="manage-scholars">
             <i class="fas fa-graduation-cap"></i> Manage Scholarships
         </a>
-        <a href="manage_applications.php" class="menu-item" id="applications">
+        <a href="enhanced_manage_applications.php" class="menu-item" id="applications">
             <i class="fas fa-file-alt"></i> Applications
         </a>
         <a href="approved_scholars.php" class="menu-item" id="approved-scholars">

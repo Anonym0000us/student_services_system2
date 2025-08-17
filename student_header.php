@@ -1,3 +1,12 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+if (!isset($_SESSION['user_id'])) {
+    header('Location: login.php');
+    exit();
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -218,7 +227,7 @@
                 <div class="sub-dropdown">
                     <a href="#">🎓 Scholarship</a>
                     <div class="sub-dropdown-content">
-                        <a href="scholarships.php">📝 Apply</a>
+                        <a href="enhanced_scholarships.php">📝 Apply</a>
                         <a href="track_applications.php">📊 Status</a>
                         <a href="scholarship_resources.php">📚 Resources</a>
                     </div>
