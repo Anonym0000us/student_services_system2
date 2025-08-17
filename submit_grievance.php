@@ -154,8 +154,9 @@ $conn->close();
                 <div class="sub-dropdown">
                     <a href="#">🗣️ Guidance</a>
                     <div class="sub-dropdown-content">
-                        <a href="guidance_request.php">📅 Book Appointment</a>
-                        <a href="student_status_appoinments.php">📋 Appointment Status</a>
+                        <a href="guidance_booking.php">📅 Book via Calendar</a>
+                        <a href="guidance_request.php">📝 Request Form</a>
+                        <a href="student_status_appointments.php">📋 Appointment Status</a>
                         <a href="guidance_counseling.php">🗣️ Counseling</a>
                         <a href="guidance_resources.php">📖 Resources</a>
                     </div>
