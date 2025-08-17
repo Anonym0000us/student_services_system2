@@ -203,7 +203,8 @@ if (!isset($_SESSION['user_id'])) {
         .header-right {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
+            margin-left: 20px;
         }
 
         .notifications {
@@ -243,21 +244,23 @@ if (!isset($_SESSION['user_id'])) {
         .user-profile {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             cursor: pointer;
-            padding: 8px 12px;
+            padding: 6px 10px;
             border-radius: 20px;
             transition: 0.3s ease;
+            border: 1px solid transparent;
         }
 
         .user-profile:hover {
             background-color: gold;
             color: #003366;
+            border-color: gold;
         }
 
         .user-avatar {
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
             background-color: gold;
             border-radius: 50%;
             display: flex;
@@ -265,21 +268,22 @@ if (!isset($_SESSION['user_id'])) {
             justify-content: center;
             color: #003366;
             font-weight: bold;
-            font-size: 12px;
+            font-size: 11px;
         }
 
         .user-info {
             color: white;
-            font-size: 12px;
+            font-size: 11px;
         }
 
         .user-info .user-name {
             font-weight: bold;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
+            white-space: nowrap;
         }
 
         .user-info .user-role {
-            font-size: 10px;
+            font-size: 9px;
             opacity: 0.8;
         }
 
@@ -327,18 +331,64 @@ if (!isset($_SESSION['user_id'])) {
             font-size: 14px;
         }
 
+        .notifications-panel {
+            position: absolute;
+            top: 100%;
+            right: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            min-width: 250px;
+            display: none;
+            z-index: 1000;
+            margin-top: 5px;
+        }
+
+        .notifications-panel.active {
+            display: block;
+        }
+
+        .notifications-panel .dropdown-header {
+            background-color: #003366;
+            color: white;
+            padding: 12px 15px;
+            border-radius: 8px 8px 0 0;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .notifications-panel a {
+            color: #333;
+            padding: 10px 15px;
+            display: block;
+            text-decoration: none;
+            border-bottom: 1px solid #eee;
+            transition: 0.3s ease;
+        }
+
+        .notifications-panel a:last-child {
+            border-bottom: none;
+        }
+
+        .notifications-panel a:hover {
+            background-color: #f8f9fa;
+            color: #003366;
+        }
+
         @media (max-width: 768px) {
             .header-right {
                 flex-direction: column;
                 gap: 10px;
                 margin-top: 15px;
+                margin-left: 0;
             }
             
             .user-profile {
                 justify-content: center;
             }
             
-            .profile-dropdown {
+            .profile-dropdown,
+            .notifications-panel {
                 position: relative;
                 top: auto;
                 right: auto;
@@ -454,6 +504,22 @@ if (!isset($_SESSION['user_id'])) {
     <a href="login.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
 </div>
 
+<!-- Notifications Panel -->
+<div class="notifications-panel" id="notificationsPanel">
+    <div class="dropdown-header">
+        <i class="fas fa-bell"></i> Notifications
+    </div>
+    <?php if (isset($notification_count) && $notification_count > 0): ?>
+        <a href="view_notifications.php"><i class="fas fa-envelope"></i> View All (<?= $notification_count ?> new)</a>
+        <a href="scholarships.php"><i class="fas fa-graduation-cap"></i> Check Scholarship Updates</a>
+        <a href="track_applications.php"><i class="fas fa-file-alt"></i> Check Application Status</a>
+    <?php else: ?>
+        <div style="padding: 15px; color: #666; text-align: center;">
+            <i class="fas fa-check-circle"></i> No new notifications
+        </div>
+    <?php endif; ?>
+</div>
+
 <script>
     // Mobile Menu Toggle
     document.addEventListener("DOMContentLoaded", function () {
@@ -507,27 +573,42 @@ if (!isset($_SESSION['user_id'])) {
         // Profile Dropdown Functionality
         const userProfile = document.getElementById('userProfile');
         const profileDropdown = document.getElementById('profileDropdown');
+        const notifications = document.getElementById('notifications');
+        const notificationsPanel = document.getElementById('notificationsPanel');
 
         if (userProfile && profileDropdown) {
             userProfile.addEventListener('click', function(e) {
                 e.stopPropagation();
                 profileDropdown.classList.toggle('active');
-            });
-
-            // Close dropdown when clicking outside
-            document.addEventListener('click', function(e) {
-                if (!userProfile.contains(e.target) && !profileDropdown.contains(e.target)) {
-                    profileDropdown.classList.remove('active');
-                }
-            });
-
-            // Close dropdown on escape key
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    profileDropdown.classList.remove('active');
-                }
+                notificationsPanel.classList.remove('active');
             });
         }
+
+        if (notifications && notificationsPanel) {
+            notifications.addEventListener('click', function(e) {
+                e.stopPropagation();
+                notificationsPanel.classList.toggle('active');
+                profileDropdown.classList.remove('active');
+            });
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!userProfile.contains(e.target) && !profileDropdown.contains(e.target)) {
+                profileDropdown.classList.remove('active');
+            }
+            if (!notifications.contains(e.target) && !notificationsPanel.contains(e.target)) {
+                notificationsPanel.classList.remove('active');
+            }
+        });
+
+        // Close dropdowns on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                profileDropdown.classList.remove('active');
+                notificationsPanel.classList.remove('active');
+            }
+        });
     });
 </script>
 
