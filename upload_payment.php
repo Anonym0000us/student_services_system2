@@ -12,35 +12,121 @@ $studentId = $_SESSION['user_id'];
 $roomId = isset($_POST['room_id']) ? intval($_POST['room_id']) : 0;
 $amount = isset($_POST['amount']) ? trim($_POST['amount']) : '';
 
-if ($roomId <= 0) { echo json_encode(["success" => false, "message" => "No active room assignment found."]); exit; }
-if ($amount === '' || !is_numeric($amount) || (float)$amount <= 0) { echo json_encode(["success" => false, "message" => "Invalid amount."]); exit; }
-if (!isset($_FILES['receipt']) || $_FILES['receipt']['error'] !== UPLOAD_ERR_OK) { echo json_encode(["success" => false, "message" => "Invalid file upload."]); exit; }
+// Validation
+if ($roomId <= 0) { 
+    echo json_encode(["success" => false, "message" => "No active room assignment found."]); 
+    exit; 
+}
 
-$maxSize = 5 * 1024 * 1024;
-if ($_FILES['receipt']['size'] > $maxSize) { echo json_encode(["success" => false, "message" => "File too large. Max 5MB."]); exit; }
+if ($amount === '' || !is_numeric($amount) || (float)$amount <= 0) { 
+    echo json_encode(["success" => false, "message" => "Invalid amount."]); 
+    exit; 
+}
 
+if (!isset($_FILES['receipt']) || $_FILES['receipt']['error'] !== UPLOAD_ERR_OK) { 
+    echo json_encode(["success" => false, "message" => "Invalid file upload."]); 
+    exit; 
+}
+
+$maxSize = 5 * 1024 * 1024; // 5MB
+if ($_FILES['receipt']['size'] > $maxSize) { 
+    echo json_encode(["success" => false, "message" => "File too large. Max 5MB."]); 
+    exit; 
+}
+
+// Validate file type
 $finfo = new finfo(FILEINFO_MIME_TYPE);
 $mime = $finfo->file($_FILES['receipt']['tmp_name']);
 $allowed = ['image/jpeg'=>'jpg','image/png'=>'png','application/pdf'=>'pdf'];
-if (!array_key_exists($mime, $allowed)) { echo json_encode(["success" => false, "message" => "Invalid file type."]); exit; }
+
+if (!array_key_exists($mime, $allowed)) { 
+    echo json_encode(["success" => false, "message" => "Invalid file type. Only JPG, PNG, and PDF are allowed."]); 
+    exit; 
+}
 
 $ext = $allowed[$mime];
+
+// Create uploads directory if it doesn't exist
 $uploadDir = __DIR__ . '/uploads/payments';
-if (!is_dir($uploadDir)) { mkdir($uploadDir, 0755, true); }
+if (!is_dir($uploadDir)) { 
+    if (!mkdir($uploadDir, 0755, true)) {
+        echo json_encode(["success" => false, "message" => "Failed to create upload directory."]); 
+        exit;
+    }
+}
+
+// Check if directory is writable
+if (!is_writable($uploadDir)) {
+    echo json_encode(["success" => false, "message" => "Upload directory is not writable."]); 
+    exit;
+}
+
+// Generate unique filename
 $timestamp = date('Ymd_His');
 $sanitizedId = preg_replace('/[^A-Za-z0-9_-]/','', $studentId);
 $filename = $sanitizedId . '_' . $timestamp . '.' . $ext;
 $dest = $uploadDir . '/' . $filename;
 
+// Move uploaded file
 if (!move_uploaded_file($_FILES['receipt']['tmp_name'], $dest)) {
-    echo json_encode(["success" => false, "message" => "Failed to save file."]); exit;
+    echo json_encode(["success" => false, "message" => "Failed to save file."]); 
+    exit; 
 }
 
-$stmt = $conn->prepare("INSERT INTO payments (student_id, room_id, amount, receipt_path, status, submitted_at) VALUES (?, ?, ?, ?, 'Pending', NOW())");
-$stmt->bind_param('sids', $studentId, $roomId, $amount, $filename);
-if ($stmt->execute()) {
-    echo json_encode(["success" => true, "message" => "Payment uploaded. Awaiting verification."]);
-} else {
+try {
+    // Check if the dormitory_payments table exists and has the correct structure
+    $checkTable = "SHOW TABLES LIKE 'dormitory_payments'";
+    $tableExists = $conn->query($checkTable);
+    
+    if ($tableExists->num_rows === 0) {
+        // Create the dormitory_payments table if it doesn't exist
+        $createTable = "CREATE TABLE IF NOT EXISTS dormitory_payments (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id VARCHAR(50) NOT NULL,
+            room_id INT NOT NULL,
+            amount DECIMAL(10,2) NOT NULL,
+            receipt_file VARCHAR(255) NOT NULL,
+            status ENUM('Pending', 'Verified', 'Rejected') DEFAULT 'Pending',
+            submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            verified_by VARCHAR(50) NULL,
+            verified_at TIMESTAMP NULL,
+            remarks TEXT NULL,
+            INDEX idx_user_id (user_id),
+            INDEX idx_room_id (room_id),
+            INDEX idx_status (status)
+        )";
+        
+        if (!$conn->query($createTable)) {
+            throw new Exception("Failed to create dormitory_payments table: " . $conn->error);
+        }
+    }
+    
+    // Insert payment record into dormitory_payments table
+    $stmt = $conn->prepare("INSERT INTO dormitory_payments (user_id, room_id, amount, receipt_file, status, submitted_at) VALUES (?, ?, ?, ?, 'Pending', NOW())");
+    
+    if (!$stmt) {
+        throw new Exception("Prepare statement failed: " . $conn->error);
+    }
+    
+    $stmt->bind_param('sids', $studentId, $roomId, $amount, $filename);
+    
+    if (!$stmt->execute()) {
+        throw new Exception("Execute failed: " . $stmt->error);
+    }
+    
+    echo json_encode(["success" => true, "message" => "Payment uploaded successfully! Awaiting verification."]);
+    
+} catch (Exception $e) {
+    // Clean up uploaded file if database insert fails
     @unlink($dest);
-    echo json_encode(["success" => false, "message" => "Database error."]); 
+    
+    // Log the error for debugging
+    error_log("Payment upload error: " . $e->getMessage());
+    
+    echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]); 
+} finally {
+    if (isset($stmt)) {
+        $stmt->close();
+    }
 }
+?>
