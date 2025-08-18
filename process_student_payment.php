@@ -145,7 +145,7 @@ try {
         exit;
     }
 
-    // Update payment
+    // Update payment - Using the correct payments table with all available columns
     if ($action === 'verify') {
         $stmt = $conn->prepare("UPDATE payments SET status = ?, verified_by = ?, verified_at = NOW(), remarks = ?, receipt_number = ?, date_paid = ? WHERE id = ?");
         $stmt->bind_param('sssssi', $status, $_SESSION['user_id'], $remarks, $receiptNumber, $datePaid, $id);

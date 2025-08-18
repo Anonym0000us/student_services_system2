@@ -32,7 +32,7 @@ if (!$roomId) {
     if ($appRoom) { $roomId = (int)$appRoom['id']; $roomName = $appRoom['name']; }
 }
 
-// History
+// History - Updated to use the correct payments table with correct column names
 $rows = [];
 $stmt = $conn->prepare("SELECT id, room_id, amount, receipt_path, status, submitted_at FROM payments WHERE student_id = ? ORDER BY submitted_at DESC");
 $stmt->bind_param('s', $studentId);
@@ -130,8 +130,22 @@ document.getElementById('uploadForm').addEventListener('submit', function(e){
     xhr.open('POST', form.action, true);
     xhr.upload.onprogress = function(evt){ if (evt.lengthComputable) { const p = Math.floor((evt.loaded/evt.total)*100); bar.firstElementChild.style.width = p + '%'; } };
     xhr.onload = function(){
-        try { const res = JSON.parse(xhr.responseText); alert(res.message || (res.success?'Uploaded':'Failed')); if (res.success) location.reload(); }
-        catch(e){ alert('Server error'); }
+        try { 
+            const res = JSON.parse(xhr.responseText); 
+            if (res.success) {
+                alert(res.message || 'Payment uploaded successfully!');
+                location.reload();
+            } else {
+                alert(res.message || 'Upload failed');
+            }
+        }
+        catch(e){ 
+            console.error('Server response error:', e);
+            alert('Server error occurred. Please try again.'); 
+        }
+    };
+    xhr.onerror = function() {
+        alert('Network error occurred. Please check your connection and try again.');
     };
     const data = new FormData(form);
     xhr.send(data);

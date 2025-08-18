@@ -50,7 +50,7 @@ if ($id <= 0) {
 
 try {
     // Fetch payment details
-    $stmt = $conn->prepare("SELECT student_id, receipt_path, file_hash, amount, submitted_at, status FROM payments WHERE id = ?");
+    $stmt = $conn->prepare("SELECT student_id, receipt_path, amount, submitted_at, status FROM payments WHERE id = ?");
     $stmt->bind_param('i', $id);
     $stmt->execute();
     $result = $stmt->get_result();
