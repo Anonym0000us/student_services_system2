@@ -103,8 +103,8 @@ $status = $action === 'verify' ? 'Verified' : 'Rejected';
 try {
     $conn->begin_transaction();
 
-    // Check payment and validate user_id, room_id
-    $checkStmt = $conn->prepare("SELECT status, user_id, room_id FROM dormitory_payments WHERE id = ?");
+    // Check payment and validate student_id, room_id
+    $checkStmt = $conn->prepare("SELECT status, student_id, room_id FROM payments WHERE id = ?");
     $checkStmt->bind_param('i', $id);
     $checkStmt->execute();
     $checkResult = $checkStmt->get_result();
@@ -123,9 +123,9 @@ try {
         exit;
     }
 
-    // Validate user_id
+    // Validate student_id
     $studentCheck = $conn->prepare("SELECT user_id FROM users WHERE user_id = ? AND status = 'Active'");
-    $studentCheck->bind_param('s', $row['user_id']);
+    $studentCheck->bind_param('s', $row['student_id']);
     $studentCheck->execute();
     if (!$studentCheck->get_result()->num_rows) {
         $conn->rollback();
@@ -145,12 +145,12 @@ try {
         exit;
     }
 
-    // Update payment - Note: dormitory_payments table doesn't have receipt_number and date_paid columns
+    // Update payment - Using the correct payments table with all available columns
     if ($action === 'verify') {
-        $stmt = $conn->prepare("UPDATE dormitory_payments SET status = ?, verified_by = ?, verified_at = NOW(), remarks = ? WHERE id = ?");
-        $stmt->bind_param('sssi', $status, $_SESSION['user_id'], $remarks, $id);
+        $stmt = $conn->prepare("UPDATE payments SET status = ?, verified_by = ?, verified_at = NOW(), remarks = ?, receipt_number = ?, date_paid = ? WHERE id = ?");
+        $stmt->bind_param('sssssi', $status, $_SESSION['user_id'], $remarks, $receiptNumber, $datePaid, $id);
     } else {
-        $stmt = $conn->prepare("UPDATE dormitory_payments SET status = ?, verified_by = ?, verified_at = NOW(), remarks = ? WHERE id = ?");
+        $stmt = $conn->prepare("UPDATE payments SET status = ?, verified_by = ?, verified_at = NOW(), remarks = ? WHERE id = ?");
         $stmt->bind_param('sssi', $status, $_SESSION['user_id'], $remarks, $id);
     }
     $stmt->execute();

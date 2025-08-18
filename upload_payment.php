@@ -74,41 +74,17 @@ if (!move_uploaded_file($_FILES['receipt']['tmp_name'], $dest)) {
 }
 
 try {
-    // Check if the dormitory_payments table exists and has the correct structure
-    $checkTable = "SHOW TABLES LIKE 'dormitory_payments'";
-    $tableExists = $conn->query($checkTable);
+    // Calculate file hash for security
+    $fileHash = hash_file('sha256', $dest);
     
-    if ($tableExists->num_rows === 0) {
-        // Create the dormitory_payments table if it doesn't exist
-        $createTable = "CREATE TABLE IF NOT EXISTS dormitory_payments (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            user_id VARCHAR(50) NOT NULL,
-            room_id INT NOT NULL,
-            amount DECIMAL(10,2) NOT NULL,
-            receipt_file VARCHAR(255) NOT NULL,
-            status ENUM('Pending', 'Verified', 'Rejected') DEFAULT 'Pending',
-            submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            verified_by VARCHAR(50) NULL,
-            verified_at TIMESTAMP NULL,
-            remarks TEXT NULL,
-            INDEX idx_user_id (user_id),
-            INDEX idx_room_id (room_id),
-            INDEX idx_status (status)
-        )";
-        
-        if (!$conn->query($createTable)) {
-            throw new Exception("Failed to create dormitory_payments table: " . $conn->error);
-        }
-    }
-    
-    // Insert payment record into dormitory_payments table
-    $stmt = $conn->prepare("INSERT INTO dormitory_payments (user_id, room_id, amount, receipt_file, status, submitted_at) VALUES (?, ?, ?, ?, 'Pending', NOW())");
+    // Insert payment record into the existing payments table
+    $stmt = $conn->prepare("INSERT INTO payments (student_id, room_id, amount, receipt_path, status, submitted_at, file_hash) VALUES (?, ?, ?, ?, 'Pending', NOW(), ?)");
     
     if (!$stmt) {
         throw new Exception("Prepare statement failed: " . $conn->error);
     }
     
-    $stmt->bind_param('sids', $studentId, $roomId, $amount, $filename);
+    $stmt->bind_param('sids', $studentId, $roomId, $amount, $filename, $fileHash);
     
     if (!$stmt->execute()) {
         throw new Exception("Execute failed: " . $stmt->error);

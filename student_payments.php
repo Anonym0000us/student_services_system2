@@ -32,9 +32,9 @@ if (!$roomId) {
     if ($appRoom) { $roomId = (int)$appRoom['id']; $roomName = $appRoom['name']; }
 }
 
-// History - Updated to use dormitory_payments table with correct column names
+// History - Updated to use the correct payments table with correct column names
 $rows = [];
-$stmt = $conn->prepare("SELECT id, room_id, amount, receipt_file, status, submitted_at FROM dormitory_payments WHERE user_id = ? ORDER BY submitted_at DESC");
+$stmt = $conn->prepare("SELECT id, room_id, amount, receipt_path, status, submitted_at FROM payments WHERE student_id = ? ORDER BY submitted_at DESC");
 $stmt->bind_param('s', $studentId);
 $stmt->execute();
 $res = $stmt->get_result();

@@ -50,7 +50,7 @@ if ($id <= 0) {
 
 try {
     // Fetch payment details
-    $stmt = $conn->prepare("SELECT user_id, receipt_file, amount, submitted_at, status FROM dormitory_payments WHERE id = ?");
+    $stmt = $conn->prepare("SELECT student_id, receipt_path, amount, submitted_at, status FROM payments WHERE id = ?");
     $stmt->bind_param('i', $id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -62,7 +62,7 @@ try {
     }
 
     // Security: Access control
-    $canView = ($_SESSION['user_id'] === $row['user_id']) || ($_SESSION['role'] === 'Dormitory Admin');
+    $canView = ($_SESSION['user_id'] === $row['student_id']) || ($_SESSION['role'] === 'Dormitory Admin');
     if (!$canView) {
         http_response_code(403);
         include 'error_page.php';
@@ -70,7 +70,7 @@ try {
     }
 
     // Validate file
-    $filePath = UPLOAD_DIR . '/' . basename($row['receipt_file']);
+    $filePath = UPLOAD_DIR . '/' . basename($row['receipt_path']);
     if (!is_file($filePath)) {
         http_response_code(404);
         include 'error_page.php';
@@ -94,7 +94,12 @@ try {
         exit;
     }
 
-    // File hash validation removed - not stored in dormitory_payments table
+    // Verify file hash
+    if ($row['file_hash'] && hash_file('sha256', $filePath) !== $row['file_hash']) {
+        http_response_code(400);
+        include 'error_page.php';
+        exit;
+    }
 
     // Log file access
     logAction($conn, $_SESSION['user_id'], 'view_receipt', $id);
@@ -130,7 +135,7 @@ try {
                 <div class="card p-4">
                     <h2 class="mb-3">Payment Receipt #<?php echo $id; ?></h2>
                     <div class="mb-3">
-                        <p class="text-muted mb-1"><strong>Student ID:</strong> <?php echo htmlspecialchars($row['user_id']); ?></p>
+                        <p class="text-muted mb-1"><strong>Student ID:</strong> <?php echo htmlspecialchars($row['student_id']); ?></p>
                         <p class="text-muted mb-1"><strong>Amount:</strong> ₱<?php echo htmlspecialchars(number_format((float)$row['amount'], 2)); ?></p>
                         <p class="text-muted mb-1"><strong>Submitted:</strong> <?php echo htmlspecialchars($row['submitted_at']); ?></p>
                         <p class="text-muted mb-1"><strong>Status:</strong> <span class="badge bg-<?php echo $row['status'] === 'Verified' ? 'success' : ($row['status'] === 'Rejected' ? 'danger' : 'warning'); ?>"><?php echo htmlspecialchars($row['status']); ?></span></p>
